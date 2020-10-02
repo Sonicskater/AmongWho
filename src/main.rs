@@ -30,8 +30,8 @@ async fn main() {
         .group(&GENERAL_GROUP);
 
     // Login with a bot token from the environment
-    //let token = env::var("DISCORD_TOKEN").expect("token");
-    let token = "NzYxNDE3MTQ2MjMxODE2MjQz.X3aS-g.vNStpBueY96hwxFt6wULNjGoA1s";
+    let token = env::var("DISCORD_TOKEN").expect("token not found, please set env variable DISCORD_TOKEN");
+    //let token = "NzYxNDE3MTQ2MjMxODE2MjQz.X3aS-g.vNStpBueY96hwxFt6wULNjGoA1s";
     let mut client = Client::new(token)
         .event_handler(Handler)
         .framework(framework)
