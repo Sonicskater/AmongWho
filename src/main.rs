@@ -1,6 +1,7 @@
 use serenity::async_trait;
+use serenity::collector;
 use serenity::client::{Client, Context, EventHandler,};
-use serenity::model::channel::Message;
+use serenity::model::channel::{Message, ReactionType};
 use serenity::framework::standard::{
     StandardFramework,
     CommandResult,
@@ -13,6 +14,8 @@ use serenity::framework::standard::{
 use std::env;
 use tokio::time::{delay_for, Instant};
 use serenity::static_assertions::_core::time::Duration;
+use serenity::utils::MessageBuilder;
+use serenity::model::prelude::User;
 
 #[group]
 #[commands(ping)]
@@ -49,16 +52,47 @@ async fn ping(ctx: &Context, msg: &Message) -> CommandResult {
 
 
     println!("Ponged {}",msg.author.name);
+    let reply = format!("Pong");
+    msg.reply(ctx, reply).await?;
+    Ok(())
+}
 
-    for i in 0..10 {
-        let reply = format!("Pong {}", i);
-        msg.reply(ctx, reply).await?;
-        for r in &msg.reactions {
-            let report = format!("Reaction {} x {}",r.reaction_type,r.count);
-            msg.reply(ctx, report).await?;
+#[command]
+async fn lfg(ctx: &Context, msg: &Message) -> CommandResult {
+    msg.delete(ctx).await?;
+
+    let content = MessageBuilder::new()
+        .push("@here")
+        .mention(&msg.author)
+        .push(" is looking for players!")
+        .push("\nReact to this message with 👍 to join this game.").build();
+
+    let posting = msg.reply(ctx, content).await?;
+
+    posting.react(ctx, ReactionType::from('👍')).await?;
+
+    loop {
+        if let Some(reaction) = &posting.await_reaction(&ctx).timeout(Duration::from_secs(2*15)).await {
+
+            let users : Vec<User> = reaction.as_inner_ref().users(ctx,ReactionType::from('👍'),Some(10), Some(posting.author.id)).await?;
+
+            if users.len() >= 6 {
+                let mut call = MessageBuilder::new();
+                call.push("Hey, enough players have signed up!");
+                for user in users{
+                    call.mention(&user);
+                }
+                call.push(" will be playing today.");
+                call.push("\nThe posting will now be closed.");
+                posting.delete(ctx).await?;
+
+                break;
+            }
+
+        } else {
+            msg.reply(ctx,"Not enough people have joined. Maybe try again later?").await?;
+            break;
         }
-        delay_for(Duration::from_millis(10000)).await;
     }
-
     Ok(())
 }
