@@ -16,9 +16,10 @@ use tokio::time::{delay_for, Instant};
 use serenity::static_assertions::_core::time::Duration;
 use serenity::utils::MessageBuilder;
 use serenity::model::prelude::User;
+use serenity::model::id::UserId;
 
 #[group]
-#[commands(ping)]
+#[commands(ping,lfg)]
 struct General;
 
 struct Handler;
@@ -59,8 +60,8 @@ async fn ping(ctx: &Context, msg: &Message) -> CommandResult {
 
 #[command]
 async fn lfg(ctx: &Context, msg: &Message) -> CommandResult {
+    println!("Looking for group... {}",msg.author.name);
     msg.delete(ctx).await?;
-
     let content = MessageBuilder::new()
         .push("@here")
         .mention(&msg.author)
@@ -71,10 +72,13 @@ async fn lfg(ctx: &Context, msg: &Message) -> CommandResult {
 
     posting.react(ctx, ReactionType::from('👍')).await?;
 
+    let mut users : Vec<User> = vec![];
     loop {
-        if let Some(reaction) = &posting.await_reaction(&ctx).timeout(Duration::from_secs(2*15)).await {
+        if let Some(reaction) = &posting.await_reaction(&ctx).timeout(Duration::from_secs(15)).await {
 
-            let users : Vec<User> = reaction.as_inner_ref().users(ctx,ReactionType::from('👍'),Some(10), Some(posting.author.id)).await?;
+            users.push(reaction.as_inner_ref().user(ctx).await? as User);
+
+            println!("{} users have joined", users.len());
 
             if users.len() >= 6 {
                 let mut call = MessageBuilder::new();
@@ -82,10 +86,11 @@ async fn lfg(ctx: &Context, msg: &Message) -> CommandResult {
                 for user in users{
                     call.mention(&user);
                 }
-                call.push(" will be playing today.");
+                call.push(" are among us today.");
                 call.push("\nThe posting will now be closed.");
                 posting.delete(ctx).await?;
 
+                msg.reply(ctx,call.build()).await?;
                 break;
             }
 
