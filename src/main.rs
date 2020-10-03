@@ -36,6 +36,7 @@ async fn main() {
     // Login with a bot token from the environment
     let token = env::var("DISCORD_TOKEN").expect("token not found, please set env variable DISCORD_TOKEN");
     //let token = "NzYxNDE3MTQ2MjMxODE2MjQz.X3aS-g.vNStpBueY96hwxFt6wULNjGoA1s";
+    println!("Token found. Starting client....");
     let mut client = Client::new(token)
         .event_handler(Handler)
         .framework(framework)
@@ -73,14 +74,15 @@ async fn lfg(ctx: &Context, msg: &Message) -> CommandResult {
     posting.react(ctx, ReactionType::from('👍')).await?;
 
     let mut users : Vec<User> = vec![];
+
+    let mins = 10;
     loop {
-        if let Some(reaction) = &posting.await_reaction(&ctx).timeout(Duration::from_secs(15)).await {
+        if let Some(reaction) = &posting.await_reaction(&ctx).timeout(Duration::from_secs(mins*60)).await {
 
             users.push(reaction.as_inner_ref().user(ctx).await? as User);
 
             println!("{} users have joined", users.len());
-
-            if users.len() >= 6 {
+            if users.len() == 10 {
                 let mut call = MessageBuilder::new();
                 call.push("Hey, enough players have signed up!");
                 for user in users{
@@ -95,7 +97,21 @@ async fn lfg(ctx: &Context, msg: &Message) -> CommandResult {
             }
 
         } else {
-            msg.reply(ctx,"Not enough people have joined. Maybe try again later?").await?;
+            if users.len() >= 6 {
+                let mut call = MessageBuilder::new();
+                call.push("Hey, enough players have signed up!");
+                for user in users{
+                    call.mention(&user);
+                }
+                call.push(" are among us today.");
+                call.push("\nThe posting will now be closed.");
+                posting.delete(ctx).await?;
+
+                msg.reply(ctx,call.build()).await?;
+                break;
+            } else {
+                msg.reply(ctx,"Not enough people have joined. Maybe try again later?").await?;
+            }
             break;
         }
     }
