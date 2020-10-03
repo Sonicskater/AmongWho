@@ -30,4 +30,4 @@ jobs:
     - uses: actions/upload-artifact@v2
       with:
         name: among-who-linux
-        path: target/release/*
+        path: target/release/AmongWho
