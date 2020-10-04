@@ -114,6 +114,7 @@ async fn lfg(ctx: &Context, msg: &Message) -> CommandResult {
                 posting.delete(ctx).await?;
 
                 msg.reply(ctx,call.build()).await?;
+                
                 break;
             }
 
@@ -139,11 +140,7 @@ async fn lfg(ctx: &Context, msg: &Message) -> CommandResult {
                 call.push("\nThe posting will now be closed.");
                 posting.delete(ctx).await?;
 
-                let x = msg.reply(ctx,call.build()).await?;
-
-                delay_for(Duration::from_secs(60*5)).await;
-
-                x.delete(ctx).await?;
+                msg.reply(ctx,call.build()).await?;
 
                 break;
             } else if attempts < max_attempt{
