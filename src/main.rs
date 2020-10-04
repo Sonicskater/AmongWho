@@ -17,6 +17,7 @@ use serenity::static_assertions::_core::time::Duration;
 use serenity::utils::MessageBuilder;
 use serenity::model::prelude::User;
 use serenity::model::id::UserId;
+use std::collections::HashSet;
 
 #[group]
 #[commands(ping,lfg)]
@@ -73,15 +74,21 @@ async fn lfg(ctx: &Context, msg: &Message) -> CommandResult {
 
     posting.react(ctx, ReactionType::from('👍')).await?;
 
-    let mut users : Vec<User> = vec![];
+    let mut users : HashSet<User> = HashSet::new();
 
     let mins = 10;
+    let mut attempts = 0;
+    let max_attempt = 4;
     loop {
         if let Some(reaction) = &posting.await_reaction(&ctx).timeout(Duration::from_secs(mins*60)).await {
 
-            users.push(reaction.as_inner_ref().user(ctx).await? as User);
+            users.insert(reaction.as_inner_ref().user(ctx).await? as User);
 
-            println!("{} users have joined", users.len());
+            attempts = 0;
+            println!("{} users are waiting", users.len());
+            for user in &users {
+                println!("{}",user.name);
+            }
             if users.len() == 10 {
                 let mut call = MessageBuilder::new();
                 call.push("Hey, enough players have signed up!");
@@ -107,12 +114,21 @@ async fn lfg(ctx: &Context, msg: &Message) -> CommandResult {
                 call.push("\nThe posting will now be closed.");
                 posting.delete(ctx).await?;
 
-                msg.reply(ctx,call.build()).await?;
+                let x = msg.reply(ctx,call.build()).await?;
+
+                delay_for(Duration::from_secs(60*5)).await;
+
+                x.delete(ctx);
+
                 break;
+            } else if attempts < max_attempt{
+                attempts+=1;
             } else {
+                posting.delete(ctx).await?;
                 msg.reply(ctx,"Not enough people have joined. Maybe try again later?").await?;
+                break;
             }
-            break;
+
         }
     }
     Ok(())
