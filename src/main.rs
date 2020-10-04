@@ -75,6 +75,7 @@ async fn lfg(ctx: &Context, msg: &Message) -> CommandResult {
     posting.react(ctx, ReactionType::from('👍')).await?;
 
     let mut users : HashSet<User> = HashSet::new();
+    //let mut users = vec![];
 
     let mins = 10;
     let mut attempts = 0;
@@ -83,6 +84,7 @@ async fn lfg(ctx: &Context, msg: &Message) -> CommandResult {
         if let Some(reaction) = &posting.await_reaction(&ctx).timeout(Duration::from_secs(mins*60)).await {
 
             users.insert(reaction.as_inner_ref().user(ctx).await? as User);
+            //users.push(reaction.as_inner_ref().user(ctx).await? as User);
 
             attempts = 0;
             println!("{} users are waiting", users.len());
@@ -92,9 +94,21 @@ async fn lfg(ctx: &Context, msg: &Message) -> CommandResult {
             if users.len() == 10 {
                 let mut call = MessageBuilder::new();
                 call.push("Hey, enough players have signed up!");
-                for user in users{
-                    call.mention(&user);
+
+                {
+                    let mut i = 0;
+                    for user in &users {
+                        call.mention(user);
+
+                        if i < users.len() - 2 {
+                            call.push(", ");
+                        } else if i == users.len() - 2 {
+                            call.push(" and ");
+                        }
+                        i += 1;
+                    }
                 }
+
                 call.push(" are among us today.");
                 call.push("\nThe posting will now be closed.");
                 posting.delete(ctx).await?;
@@ -107,8 +121,19 @@ async fn lfg(ctx: &Context, msg: &Message) -> CommandResult {
             if users.len() >= 6 {
                 let mut call = MessageBuilder::new();
                 call.push("Hey, enough players have signed up!");
-                for user in users{
-                    call.mention(&user);
+
+                {
+                    let mut i = 0;
+                    for user in &users {
+                        call.mention(user);
+
+                        if i < users.len() - 2 {
+                            call.push(", ");
+                        } else if i == users.len() - 2 {
+                            call.push(" and ");
+                        }
+                        i += 1;
+                    }
                 }
                 call.push(" are among us today.");
                 call.push("\nThe posting will now be closed.");
@@ -118,7 +143,7 @@ async fn lfg(ctx: &Context, msg: &Message) -> CommandResult {
 
                 delay_for(Duration::from_secs(60*5)).await;
 
-                x.delete(ctx);
+                x.delete(ctx).await?;
 
                 break;
             } else if attempts < max_attempt{
